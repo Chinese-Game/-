@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>重組句子小遊戲</title>
+  <meta name="description" content="中文重組句子小遊戲：教師出題、學生作答、多題模式、PIN 解鎖、最後統一評分。">
+  <style>
+    :root{--gap:10px;--radius:12px}
+    *{-webkit-tap-highlight-color:transparent}
+    html,body{height:100%}
+    body{font-family: system-ui,-apple-system,Segoe UI,Roboto, "Noto Sans CJK TC",PingFangTC,Hiragino Sans,Arial,sans-serif; margin:18px auto; padding:0 14px; max-width:960px; line-height:1.45}
+    h1{font-size:1.2rem;margin:0 0 10px}
+    .card{border:1px solid #e5e5e5;border-radius:var(--radius);padding:12px;margin:10px 0;background:#fff}
+    .row{display:flex;gap:var(--gap);flex-wrap:wrap;align-items:center}
+    textarea{width:100%;border:1px solid #ccc;border-radius:10px;padding:10px;font-size:1rem}
+    input[type="password"],input[type="text"]{border:1px solid #ccc;border-radius:10px;padding:8px 10px;font-size:.95rem}
+    label{display:inline-flex;gap:8px;align-items:center;font-size:.95rem}
+    button{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;font-size:.95rem;touch-action:manipulation}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .primary{background:#2b7cff;color:#fff}
+    .ghost{background:#f5f5f5}
+    .tray,.answer{min-height:56px;display:flex;gap:var(--gap);flex-wrap:wrap;align-items:center;border:2px dashed #e9e9e9;border-radius:var(--radius);padding:10px;background:#fafafa}
+    .tile{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;padding:8px 12px;border-radius:10px;background:#fff;border:1px solid #ddd;box-shadow:0 1px 0 rgba(0,0,0,.05);font-size:1.05rem}
+    .tile:active{transform:scale(.98)}
+    .good{background:#e9f8ee;border-color:#b7ebc6}
+    .bad{background:#fff2f0;border-color:#ffccc7}
+    .status{font-weight:600}
+    .hint{color:#666;font-size:.9rem}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef3ff;color:#2b55ff;font-size:.8rem;margin-left:6px}
+    .hidden{display:none !important}
+    /* Celebration */
+    .celebration-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:60}
+    .particle{position:absolute;opacity:0}
+    @keyframes floatUp{0%{transform:translate(var(--x,0),10vh) scale(1);opacity:0}10%{opacity:1}100%{transform:translate(var(--x,0),-100vh) scale(1.2);opacity:0}}
+    .center-pop{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%) scale(.6);font-size:64px;opacity:0;z-index:61;animation:pop 900ms ease-out forwards}
+    @keyframes pop{0%{transform:translate(-50%,-50%) scale(.6) rotate(-10deg);opacity:0}60%{transform:translate(-50%,-50%) scale(1.15) rotate(0);opacity:1}100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
+    .answer.correct-pulse{animation:glow 1200ms ease-out 1}
+    @keyframes glow{0%{box-shadow:0 0 0 rgba(0,0,0,0)}30%{box-shadow:0 0 24px rgba(46,204,113,.45)}100%{box-shadow:0 0 0 rgba(0,0,0,0)}}
+    .progress{height:8px;background:#f0f3ff;border-radius:999px;overflow:hidden}
+    .progress>span{display:block;height:100%;background:#2b7cff;width:0%}
+    /* layout tweaks */
+    .toolbar{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+    .toolbar-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .toolbar-row button{white-space:nowrap}
+    @media (min-width:780px){.toolbar{flex-direction:column}}
+    /* Modals */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:70}
+    .modal{background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:16px;min-width:260px;max-width:90vw}
+    .modal h3{margin:0 0 8px;font-size:1rem}
+    .qitem{display:flex;gap:8px;align-items:flex-start;border:1px solid #eee;border-radius:10px;padding:8px}
+    .qid{font-weight:700;min-width:3ch}
+    .ans.wrong{color:#c53030}
+    .ans.correct{color:#2f855a}
+    #unlockBtn{position:fixed;right:14px;bottom:14px;z-index:50;border-radius:999px;padding:10px 14px}
+    /* boot badge */
+    #bootBadge{position:fixed;right:12px;top:12px;background:#e6ffed;color:#155724;border:1px solid #c3e6cb;border-radius:8px;padding:4px 8px;font-size:12px;z-index:9999}
+    /* JS blocked notice */
+    #jsBlockedNotice{background:#fff3cd;border:1px solid #ffeeba;color:#856404;padding:8px 12px;border-radius:8px;margin:10px 0}
+  </style>
+</head>
+<body>
+  <h1>重組句子小遊戲 <span class="pill">教師輸入句子 / 學生作答 / 多題模式</span></h1>
+
+  <div id="jsBlockedNotice">
+    ⚠️ 若看不到「<strong>JS 已載入 ✓</strong>」徽章，代表瀏覽器未執行 JavaScript（例如 iOS 的檔案預覽）。請以正式網址（GitHub Pages/Netlify）開啟此頁。
+  </div>
+
+  <div id="bootBadge" class="hidden">JS 已載入</div>
+
+  <!-- TEACHER PANEL -->
+  <section class="card" id="teacherPanel">
+    <div class="row" style="width:100%">
+      <textarea id="sentences" rows="5" placeholder="一次輸入多題：每一行是一題
+例：
+我們 今天 去 公園 玩。
+今天 下雨 了， 記得 帶 傘。
+小明 喜歡 吃 蘋果。"></textarea>
+      <div class="hint">• 一行一題。可用空格分詞（詞模式），或不加空格（每字模式）。<br>• 亦可混合：某些題用詞、某些題用字。全局選項仍會套用。</div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label><input type="checkbox" id="forceChar"> 強制每字一塊</label>
+      <label><input type="checkbox" id="excludePunct"> 排除標點不出題</label>
+    </div>
+    <div class="toolbar">
+      <div class="toolbar-row">
+        <button type="button" class="primary" id="makeSet">出題（多題）</button>
+        <button type="button" class="ghost" id="makeOne">出題（單題）</button>
+        <button type="button" class="ghost" id="shuffle">重排當前題</button>
+      </div>
+      <div class="toolbar-row">
+        <button type="button" class="ghost" id="clear">全部清除</button>
+        <button type="button" class="ghost" id="hideNow" title="出題後立即隱藏教師區">出題後隱藏</button>
+        <label style="margin-left:auto">教師PIN：<input type="password" id="pin" placeholder="可選"></label>
+        <button type="button" class="ghost" id="changePin">更改PIN</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAME AREA -->
+  <section class="card">
+    <div class="row" style="width:100%">
+      <div class="hint">第 <span id="qIndex">1</span> / <span id="qTotal">1</span> 題</div>
+      <div class="spacer" style="flex:1"></div>
+      <div class="hint">得分：<strong id="score">0</strong></div>
+    </div>
+    <div class="progress"><span id="progressBar"></span></div>
+    <div style="margin-top:10px"><strong>打亂的字/詞（點一下即可加入答案）</strong></div>
+    <div id="tray" class="tray"></div>
+    <div style="margin-top:10px"><strong>你的答案（點一下可移回上面）</strong></div>
+    <div id="answer" class="answer"></div>
+    <div class="row" style="margin-top:10px; gap:8px">
+      <button type="button" class="ghost" id="prev">上一題</button>
+      <button type="button" class="ghost" id="next">下一題</button>
+      <button type="button" class="primary" id="finishAll">交卷（全部檢查）</button>
+      <button type="button" class="ghost hidden" id="reveal" aria-hidden="true" tabindex="-1" disabled>顯示答案（僅供教師使用）</button>
+      <div class="status" id="result"></div>
+    </div>
+  </section>
+
+  <!-- ORIGINAL (for teacher reveal) -->
+  <section class="card hidden" id="originalBox">
+    <div><strong>原句</strong></div>
+    <div id="original" class="hint"></div>
+  </section>
+
+  <!-- Teacher unlock button + dialogs -->
+  <button type="button" id="unlockBtn" class="ghost hidden" title="教師解鎖">教師解鎖 🔒</button>
+
+  <div id="pinBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pinTitle">
+    <div class="modal">
+      <h3 id="pinTitle">輸入教師PIN</h3>
+      <div class="row"><input id="pinInput" type="password" placeholder="教師PIN" style="flex:1" /></div>
+      <div class="row" style="justify-content:flex-end">
+        <button type="button" id="pinCancel" class="ghost">取消</button>
+        <button type="button" id="pinOK" class="primary">解鎖</button>
+      </div>
+      <div class="hint error" id="pinHint" style="margin-top:6px"></div>
+    </div>
+  </div>
+
+  <div id="changeBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="changeTitle">
+    <div class="modal">
+      <h3 id="changeTitle">更改教師PIN</h3>
+      <div class="row"><input id="oldPinInput" type="password" placeholder="目前PIN（未設定可留空）" style="flex:1" /></div>
+      <div class="row"><input id="newPinInput" type="password" placeholder="新PIN" style="flex:1" /></div>
+      <div class="row"><input id="newPinInput2" type="password" placeholder="再次輸入新PIN" style="flex:1" /></div>
+      <div class="row" style="justify-content:flex-end">
+        <button type="button" id="changeCancel" class="ghost">取消</button>
+        <button type="button" id="changeOK" class="primary">更新</button>
+      </div>
+      <div class="hint" id="changeHint" style="margin-top:6px"></div>
+    </div>
+  </div>
+
+  <div id="summaryBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="summaryTitle">
+    <div class="modal" style="max-width:92vw;max-height:80vh;overflow:auto">
+      <h3 id="summaryTitle">作答總覽</h3>
+      <div class="qlist" id="summaryList"></div>
+      <div class="row" style="justify-content:flex-end;margin-top:8px">
+        <button type="button" id="summaryClose" class="ghost">關閉</button>
+        <button type="button" id="summaryFirstWrong" class="primary">跳到第一題錯誤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- External JS only -->
+  <script defer src="app.js"></script>
+  <noscript><div style="padding:8px;background:#ffe8e8;color:#900">此頁需要啟用 JavaScript。</div></noscript>
+</body>
+</html>
