@@ -5,12 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>重組句子小遊戲</title>
   <meta name="description" content="中文重組句子小遊戲：教師出題、學生作答、多題模式、PIN 解鎖、最後統一評分。">
+
+  <!-- Add to Home Screen / PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="重組句子小遊戲">
+  <meta name="theme-color" content="#2b7cff">
+  <!-- Lightweight data-URL manifest (works on desktop/Android; iOS uses Apple tags above) -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"重組句子小遊戲","short_name":"重組句子","start_url":"./","display":"standalone","background_color":"#ffffff","theme_color":"#2b7cff"}'>
+  <!-- Favicon & Apple icon (SVG ok; iOS will fall back to screenshot if it insists on PNG) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect rx='10' width='48' height='48' fill='%232b7cff'/%3E%3Ctext x='50%25' y='57%25' text-anchor='middle' font-family='-apple-system,Segoe UI,Roboto,Noto Sans CJK TC,PingFang TC' font-size='26' fill='white'%3E中%3C/text%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect rx='36' width='180' height='180' fill='%232b7cff'/%3E%3Ctext x='50%25' y='58%25' text-anchor='middle' font-family='-apple-system,Segoe UI,Roboto,Noto Sans CJK TC,PingFang TC' font-size='100' fill='white'%3E中%3C/text%3E%3C/svg%3E">
+
   <style>
     :root{--gap:10px;--radius:12px}
     *{-webkit-tap-highlight-color:transparent}
     html,body{height:100%}
     body{font-family: system-ui,-apple-system,Segoe UI,Roboto, "Noto Sans CJK TC",PingFangTC,Hiragino Sans,Arial,sans-serif; margin:18px auto; padding:0 14px; max-width:960px; line-height:1.45}
-    h1{font-size:1.2rem;margin:0 0 10px}
+    h1{font-size:1.2rem;margin:0 0 10px;display:flex;align-items:center;gap:8px}
     .card{border:1px solid #e5e5e5;border-radius:var(--radius);padding:12px;margin:10px 0;background:#fff}
     .row{display:flex;gap:var(--gap);flex-wrap:wrap;align-items:center}
     textarea{width:100%;border:1px solid #ccc;border-radius:10px;padding:10px;font-size:1rem}
@@ -57,10 +69,31 @@
     #bootBadge{position:fixed;right:12px;top:12px;background:#e6ffed;color:#155724;border:1px solid #c3e6cb;border-radius:8px;padding:4px 8px;font-size:12px;z-index:9999}
     /* JS blocked notice */
     #jsBlockedNotice{background:#fff3cd;border:1px solid #ffeeba;color:#856404;padding:8px 12px;border-radius:8px;margin:10px 0}
+    /* Logo */
+    .logo{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:#2b7cff;color:#fff;font-weight:700;margin-right:2px;box-shadow:0 2px 6px rgba(43,124,255,.25)}
+    .logo svg{width:18px;height:18px}
+    /* A2HS helper banner */
+    #a2hsTip{display:none;margin:10px 0;padding:10px 12px;border-radius:10px;background:#eef3ff;border:1px solid #d9e3ff;color:#213a7a;font-size:.95rem}
+    #a2hsTip button{margin-left:8px}
   </style>
 </head>
 <body>
-  <h1>重組句子小遊戲 <span class="pill">教師輸入句子 / 學生作答 / 多題模式</span></h1>
+  <h1>
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" focusable="false">
+        <rect x="0" y="0" width="24" height="24" rx="6" fill="currentColor"/>
+        <text x="50%" y="62%" text-anchor="middle" font-size="14" fill="#fff" font-family="-apple-system,Segoe UI,Roboto,Noto Sans CJK TC,PingFang TC">中</text>
+      </svg>
+    </span>
+    重組句子小遊戲
+    <span class="pill">教師輸入句子 / 學生作答 / 多題模式</span>
+  </h1>
+
+  <!-- iOS users will see this tip (only in Safari, non-standalone) -->
+  <div id="a2hsTip">
+    要將此遊戲加入主畫面：在 Safari 按 <strong>分享</strong> → <strong>加入主畫面</strong>。
+    <button class="ghost" id="a2hsClose">我知道了</button>
+  </div>
 
   <div id="jsBlockedNotice">
     ⚠️ 若看不到「<strong>JS 已載入 ✓</strong>」徽章，代表瀏覽器未執行 JavaScript（例如 iOS 的檔案預覽）。請以正式網址（GitHub Pages/Netlify）開啟此頁。
@@ -118,7 +151,7 @@
     </div>
   </section>
 
-  <!-- ORIGINAL (for teacher reveal) -->
+  <!-- ORIGINAL (teacher reveal) -->
   <section class="card hidden" id="originalBox">
     <div><strong>原句</strong></div>
     <div id="original" class="hint"></div>
@@ -164,8 +197,21 @@
     </div>
   </div>
 
-  <!-- External JS only -->
   <script defer src="app.js"></script>
   <noscript><div style="padding:8px;background:#ffe8e8;color:#900">此頁需要啟用 JavaScript。</div></noscript>
+
+  <!-- A2HS tip toggling (safe to inline; tiny) -->
+  <script>
+    (function(){
+      try{
+        var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        var isStandalone = (window.navigator.standalone === true) || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+        var tip = document.getElementById('a2hsTip');
+        var closeBtn = document.getElementById('a2hsClose');
+        if(isIOS && !isStandalone && tip){ tip.style.display='block'; }
+        if(closeBtn){ closeBtn.addEventListener('click', function(){ tip.style.display='none'; }); }
+      }catch(e){}
+    })();
+  </script>
 </body>
 </html>
